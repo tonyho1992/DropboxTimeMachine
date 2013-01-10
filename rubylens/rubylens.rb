@@ -60,15 +60,12 @@ def get_revisions(file_path, sequence_number)
         parent_dir_path = File.dirname(target_path)
         FileUtils.mkdir_p(parent_dir_path)
 
+        add_time = (Time.parse(rev.modified).to_f * 1000.0).to_i
+
         # Write this out
         File.open(target_path, 'w+') { |f| f.write contents }
         # Change the creation/mod time on the file
-        FileUtils.touch target_path { mtime: formatted_time, atime: formatted_time }
-
-        # Get the file inode
-        target_inode = File.stat(target_path).ino
-        # Get the parent inode
-        parent_inode = File.stat(parent_dir_path).ino
+        FileUtils.touch target_path { mtime: add_time }
 
         # Insertion of records into version database
         # generation_id,  (auto incremented)
@@ -80,6 +77,7 @@ def get_revisions(file_path, sequence_number)
         # generation_status, (1 ?)
         # generation_add_time, (creation datetime)
         # generation_size (filesize)
+        file_size = File.size target_path
 
         db.execute "insert into generations values (NULL, ?, ?, ?, ?, 1, 1, ?, ?);", [sequence_number, rev.rev, 'com.apple.DocumentVersions', target_path, add_time, file_size] 
     end
@@ -95,10 +93,10 @@ def traverse(dir)
             traverse file.path    
         else    
             # Create a file entry for the file
-
             # Location in dropbox
-            file_inode = File.stat(file.path).ino
-            parent_inode = File.stat(File.dirname(file.path)).ino
+            dropbox_file_path = DROPBOX_DIR + file.path
+            file_inode = File.stat(dropbox_file_path).ino
+            parent_inode = File.stat(File.dirname(dropbox_file_path)).ino
 
             # Increment sequence number
             db.execute "update sqlite_sequence set seq=seq+1;"
@@ -121,11 +119,11 @@ def traverse(dir)
             # file_path (file path)
             # file_inode (file inode)
             # file_lastseen (file modification date)
-
+            last_mod = (Time.parse(file.modified).to_f * 1000.0).to_i
             # file_status (1)
             # file_storage_id <- sequence number
 
-            db.execute "insert into files values (?, ?, ?, ?, ?, ?, 1, ?);", [sequence_number, file_name, parent_inode, file.path, file_inode, last_mod, sequence_number]
+            db.execute "insert into files values (?, ?, ?, ?, ?, ?, 1, ?);", [sequence_number, file_name, parent_inode, dropbox_file_path, file_inode, last_mod, sequence_number]
             # Else if file -> get path & revs
             get_revisions file.path, sequence_number
         end
