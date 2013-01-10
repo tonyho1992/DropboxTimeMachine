@@ -1,3 +1,4 @@
+require 'rubygems'
 require 'dropbox_sdk'
 require 'launchy'
 require 'sqlite3'
@@ -9,30 +10,38 @@ TEMP_DIR = '/tmp/'
 HISTORY_DIR = '~/.dbhistory/'
 DROPBOX_DIR = '~/Dropbox/'
 
-## Dropbox Setup ##
-session = DropboxSession.new(APP_KEY, APP_SECRET)
-
-# Auth
-session.get_request_token
-authorize_url = session.get_authorize_url
-
-# make the user sign in and authorize this token
-puts "Allow the app at ", authorize_url
-Launchy.open authorize_url
-puts "ENTER to continue..."
-# Wait for auth
-gets
-
-session.get_access_token
+## History collection ##
+tmp_db_path = TEMP_DIR+'db.sqlite'
 
 # Ready the client
-client = DropboxClient.new(session, :dropbox)
+
+def setup_dropbox()
+    ## Dropbox Setup ##
+    session = DropboxSession.new(APP_KEY, APP_SECRET)
+
+    # Auth
+    session.get_request_token
+    authorize_url = session.get_authorize_url
+
+    # make the user sign in and authorize this token
+    puts "Allow the app at ", authorize_url
+    Launchy.open authorize_url
+    puts "ENTER to continue..."
+    # Wait for auth
+    gets
+
+    session.get_access_token
+    client = DropboxClient.new(session, :dropbox)
+    return client
+end
 
 ## Version Database initialization ##
 def acquire_database(temp_path)
     # Clone the existing version database
     `sudo cp /.DocumentRevision-V100/db-V1/db.sqlite #{temp_path}`
     `sudo chmod 777 #{temp_path}`
+
+    return SQLite3::Database.new tmp_db_path
 end
 
 def plant_database(temp_path)
@@ -49,7 +58,7 @@ def plant_database(temp_path)
 end
 
 # Pull history from dropbox
-def get_revisions(file_path, sequence_number)
+def get_revisions(file_path, sequence_number, client, db)
     revisions = client.revisions file_path
     revisions.each do |rev|
         # File blobs (versions) from dropbox to the history store
@@ -84,13 +93,13 @@ def get_revisions(file_path, sequence_number)
 end
 
 # Walk across Dropbox file tree
-def traverse(dir)
+def traverse(dir, client, db)
     metadata = client.metadata dir
 
     # For each file in dropbox
     metadata.contents.each do |file| 
         if file.is_dir
-            traverse file.path    
+            traverse file.path, client, db
         else    
             # Create a file entry for the file
             # Location in dropbox
@@ -125,19 +134,17 @@ def traverse(dir)
 
             db.execute "insert into files values (?, ?, ?, ?, ?, ?, 1, ?);", [sequence_number, file_name, parent_inode, dropbox_file_path, file_inode, last_mod, sequence_number]
             # Else if file -> get path & revs
-            get_revisions file.path, sequence_number
+            get_revisions file.path, sequence_number, client, db
         end
     end
 end
 
-## History collection ##
-tmp_db_path = TEMP_DIR+'db.sqlite'
-acquire_database tmp_db_path
+client = setup_dropbox
 
-db = SQLite3::Database.new tmp_db_path
+db = acquire_database tmp_db_path
 
 # Root dir
-traverse '/'
+traverse '/', client, db
 
 plant_database tmp_db_path
 
