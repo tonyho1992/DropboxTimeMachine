@@ -5,25 +5,6 @@ from datetime import timedelta
 from datetime import tzinfo
 from sqlalchemy import *
 
-ZERO = timedelta(0)
-
-# A UTC class.
-
-class UTC(tzinfo):
-    """UTC"""
-    def utcoffset(self, dt):
-        return ZERO
-    def tzname(self, dt):
-        return "UTC"
-    def dst(self, dt):
-        return ZERO
-
-def getUnixTime(meta):
-    print meta['modified']
-    modtime = datetime(*(time.strptime(meta['modified'], "%a, %d %b %Y %H:%M:%S\
- +0000")[0:6]), tzinfo=UTC())
-    return calendar.timegm(modtime.utctimetuple())
-
 print os.environ.get('SUDO_USER')
 
 TOKEN_FILE = "token.txt"
@@ -90,13 +71,10 @@ for i in revisions:
     rev = i['rev']
     print "revision", rev, "obtained"
     f = client.get_file(FILE_PATH, rev)
-    datpath = DAT_PATH + rev + "_dat.txt"
-    outfile = open(datpath, 'w')
+    outfile = open(DAT_PATH + rev + "_dat.txt", 'w')
     outfile.write(f.read())
     f.close()
     outfile.close()
-    t = getUnixTime(i)
-    os.utime(datpath, (t, t))
 
 DB_PATH = "/.DocumentRevisions-V100/db-V1/db.sqlite"
 TMP_PATH = "tmp.db"
@@ -110,6 +88,27 @@ print "ids:", parID, inodeID
 
 sqlscript = open(SQL_PATH, "w")
 
+ZERO = timedelta(0)
+
+# A UTC class.
+
+class UTC(tzinfo):
+    """UTC"""
+
+    def utcoffset(self, dt):
+        return ZERO
+
+    def tzname(self, dt):
+        return "UTC"
+
+    def dst(self, dt):
+        return ZERO
+
+def getUnixTime(meta):
+    print meta['modified']
+    modtime = datetime(*(time.strptime(meta['modified'], "%a, %d %b %Y %H:%M:%S +0000")[0:6]), tzinfo=UTC())
+    print modtime
+    return calendar.timegm(modtime.utctimetuple())
 """
 sqlscript.write("INSERT INTO files VALUES(NULL, '"+FILE_NAME+"', "+str(parID)+", '"+ACTUAL_PATH+"', "+str(inodeID)+", "+str(getUnixTime(recentmeta))+", 1, 1);\n")
 for i in revisions:
