@@ -1,6 +1,28 @@
 from dropbox import client, rest, session
-import os, sys, shutil, time, datetime
+import os, sys, shutil, time, datetime, calendar
 from datetime import datetime
+from datetime import timedelta
+from datetime import tzinfo
+from sqlalchemy import *
+
+ZERO = timedelta(0)
+
+# A UTC class.
+
+class UTC(tzinfo):
+    """UTC"""
+    def utcoffset(self, dt):
+        return ZERO
+    def tzname(self, dt):
+        return "UTC"
+    def dst(self, dt):
+        return ZERO
+
+def getUnixTime(meta):
+    print meta['modified']
+    modtime = datetime(*(time.strptime(meta['modified'], "%a, %d %b %Y %H:%M:%S\
+ +0000")[0:6]), tzinfo=UTC())
+    return calendar.timegm(modtime.utctimetuple())
 
 print os.environ.get('SUDO_USER')
 
@@ -59,6 +81,7 @@ revisions = client.revisions(FILE_PATH)
 print "files/revisions obtained"
 
 DAT_PATH = "/.DocumentRevisions-V100/DAT/"
+TRUNCDAT_PATH = "/DAT/"
 
 if not os.path.exists(DAT_PATH):
     os.makedirs(DAT_PATH)
@@ -67,10 +90,13 @@ for i in revisions:
     rev = i['rev']
     print "revision", rev, "obtained"
     f = client.get_file(FILE_PATH, rev)
-    outfile = open(DAT_PATH + rev + "_dat.txt", 'w')
+    datpath = DAT_PATH + rev + "_dat.txt"
+    outfile = open(datpath, 'w')
     outfile.write(f.read())
     f.close()
     outfile.close()
+    t = getUnixTime(i)
+    os.utime(datpath, (t, t))
 
 DB_PATH = "/.DocumentRevisions-V100/db-V1/db.sqlite"
 TMP_PATH = "tmp.db"
@@ -84,11 +110,7 @@ print "ids:", parID, inodeID
 
 sqlscript = open(SQL_PATH, "w")
 
-def getUnixTime(meta):
-    modtime = datetime.strptime(meta['modified'], "%a, %d %b %Y %H:%M:%S +0000\
-")
-    return int(time.mktime(modtime.timetuple()))
-
+"""
 sqlscript.write("INSERT INTO files VALUES(NULL, '"+FILE_NAME+"', "+str(parID)+", '"+ACTUAL_PATH+"', "+str(inodeID)+", "+str(getUnixTime(recentmeta))+", 1, 1);\n")
 for i in revisions:
 	rev = i['rev']
@@ -96,3 +118,45 @@ for i in revisions:
 	filepath = DAT_PATH + fileloc
 	sqlscript.write("INSERT INTO generations VALUES(NULL, 1, '"+fileloc+"', 'com.apple.documentVersions', '"+filepath+"', 1, 1, "+str(getUnixTime(i))+", "+str(os.stat(filepath).st_size)+");\n")
 sqlscript.close()
+"""
+
+engine = create_engine('sqlite:///'+DB_PATH)
+
+engine.echo = False
+
+metadata = MetaData(engine)
+
+sqlite_seq = Table('sqlite_sequence', metadata, autoload=True)
+
+row = sqlite_seq.select().execute().fetchone()
+
+id = int(row['seq'])
+
+id_inc = 3
+
+seq_update = sqlite_seq.update()
+
+seq_update.execute(seq=id_inc);
+
+sqlite_storage = Table('storage', metadata, autoload=True)
+
+storage_ins = sqlite_storage.insert()
+
+storage_ins.execute(storage_id=id_inc, storage_options=1, storage_status=1)
+
+files = Table('files', metadata, autoload=True)
+
+files_ins = files.insert()
+
+generations = Table('generations', metadata, autoload=True)
+
+generations_ins = generations.insert()
+
+files_ins.execute(file_name=FILE_NAME, file_parent_id=parID, file_path=ACTUAL_PATH, file_inode=inodeID, file_last_seen=getUnixTime(recentmeta), file_status=1, file_storage_id=id_inc)
+
+for i in revisions:
+    rev = i['rev']
+    fileloc = rev + "_dat.txt"
+    filepath = DAT_PATH + fileloc
+    truncpath = TRUNCDAT_PATH + fileloc
+    generations_ins.execute(generation_storage_id=id_inc, generation_name=fileloc, generation_client_id='com.apple.documentVersions', generation_path=truncpath, generation_options=1, generation_status=1, generation_add_time=getUnixTime(i), generation_size=os.stat(filepath).st_size)
