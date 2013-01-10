@@ -30,7 +30,7 @@ client = DropboxClient.new(session, :dropbox)
 ## Version Database initialization ##
 def acquire_database(temp_path)
     # Clone the existing version database
-    `cp /.DocumentRevision-V100/db-V1/db.sqlite #{temp_path}`
+    `sudo cp /.DocumentRevision-V100/db-V1/db.sqlite #{temp_path}`
 end
 
 def plant_database(temp_path)
@@ -39,7 +39,7 @@ def plant_database(temp_path)
     `sudo launchctl stop com.apple.revisiond`
 
     # Move the modded db into place
-    `mv #{temp_path} /.DocumentRevision-V100/db-V1/db.sqlite`
+    `sudo mv #{temp_path} /.DocumentRevision-V100/db-V1/db.sqlite`
 
     # Restart the revisiond process
     `sudo launchctl start com.apple.revisiond`
