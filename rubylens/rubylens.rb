@@ -52,8 +52,8 @@ def acquire_database(temp_path)
     @log.debug "Acquiring revision database"
 
     # Clone the existing version database
-    `sudo cp /.DocumentRevision-V100/db-V1/db.sqlite #{temp_path}/db.sqlite`
-    `sudo cp /.DocumentRevision-V100/db-V1/db.sqlite-wal #{temp_path}/db.sqlite-wal`
+    `sudo cp /.DocumentRevisions-V100/db-V1/db.sqlite #{temp_path}/db.sqlite`
+    `sudo cp /.DocumentRevisions-V100/db-V1/db.sqlite-wal #{temp_path}/db.sqlite-wal`
     `sudo chmod 777 #{temp_path}/db.sqlite`
     `sudo chmod 777 #{temp_path}/db.sqlite-wal`
 
@@ -70,10 +70,10 @@ def plant_database(temp_path)
 
     # Move the modded db into place
     @log.debug "Moving new revision database"
-    `sudo mv #{temp_path}/db.sqlite /.DocumentRevision-V100/db-V1/db.sqlite`
-    `sudo mv #{temp_path}/db.sqlite-wal /.DocumentRevision-V100/db-V1/db.sqlite-wal`
-    `sudo chmod 644 /.DocumentRevision-V100/db-V1/db.sqlite`
-    `sudo chmod 644 /.DocumentRevision-V100/db-V1/db.sqlite-wal`
+    `sudo mv #{temp_path}/db.sqlite /.DocumentRevisions-V100/db-V1/db.sqlite`
+    `sudo mv #{temp_path}/db.sqlite-wal /.DocumentRevisions-V100/db-V1/db.sqlite-wal`
+    `sudo chmod 644 /.DocumentRevisions-V100/db-V1/db.sqlite`
+    `sudo chmod 644 /.DocumentRevisions-V100/db-V1/db.sqlite-wal`
 
     # Restart the revisiond process
     @log.debug "Restarting revisiond"
