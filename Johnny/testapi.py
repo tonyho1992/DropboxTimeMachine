@@ -1,5 +1,6 @@
 from dropbox import client, rest, session
-import os, sys, shutil
+import os, sys, shutil, time, datetime
+from datetime import datetime
 
 print os.environ.get('SUDO_USER')
 
@@ -51,7 +52,11 @@ client = client.DropboxClient(sess)
 
 print "client constructed"
 
+recentf, recentmeta = client.get_file_and_metadata(FILE_PATH)
+
 revisions = client.revisions(FILE_PATH)
+
+print "files/revisions obtained"
 
 DAT_PATH = "/.DocumentRevisions-V100/DAT/"
 
@@ -78,10 +83,16 @@ inodeID = os.stat(ACTUAL_PATH).st_ino
 print "ids:", parID, inodeID
 
 sqlscript = open(SQL_PATH, "w")
-sqlscript.write("INSERT INTO files VALUES(NULL, '"+FILE_NAME+"', "+str(parID)+", '"+ACTUAL_PATH+"', "+str(inodeID)+", 1357604095, 1, 1);\n")
+
+def getUnixTime(meta):
+    modtime = datetime.strptime(meta['modified'], "%a, %d %b %Y %H:%M:%S +0000\
+")
+    return int(time.mktime(modtime.timetuple()))
+
+sqlscript.write("INSERT INTO files VALUES(NULL, '"+FILE_NAME+"', "+str(parID)+", '"+ACTUAL_PATH+"', "+str(inodeID)+", "+str(getUnixTime(recentmeta))+", 1, 1);\n")
 for i in revisions:
 	rev = i['rev']
 	fileloc = rev + "_dat.txt"
 	filepath = DAT_PATH + fileloc
-	sqlscript.write("INSERT INTO generations VALUES(NULL, 1, '"+fileloc+"', 'com.apple.documentVersions', '"+filepath+"', 1, 1, 1357604095, "+str(os.stat(filepath).st_size)+");\n")
+	sqlscript.write("INSERT INTO generations VALUES(NULL, 1, '"+fileloc+"', 'com.apple.documentVersions', '"+filepath+"', 1, 1, "+str(getUnixTime(i))+", "+str(os.stat(filepath).st_size)+");\n")
 sqlscript.close()
