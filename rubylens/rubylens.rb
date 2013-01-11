@@ -16,7 +16,7 @@ HISTORY_DIR = '~/.dbhistory/'
 DROPBOX_DIR = '~/Dropbox/'
 
 ## History collection ##
-TEMP_DB_PATH = TEMP_DIR+'db.sqlite'
+TEMP_DB_PATH = TEMP_DIR
 
 # Ready the client
 
@@ -52,8 +52,10 @@ def acquire_database(temp_path)
     @log.debug "Acquiring revision database"
 
     # Clone the existing version database
-    `sudo cp /.DocumentRevision-V100/db-V1/db.sqlite #{temp_path}`
-    `sudo chmod 777 #{temp_path}`
+    `sudo cp /.DocumentRevision-V100/db-V1/db.sqlite #{temp_path}/db.sqlite`
+    `sudo cp /.DocumentRevision-V100/db-V1/db.sqlite-wal #{temp_path}/db.sqlite-wal`
+    `sudo chmod 777 #{temp_path}/db.sqlite`
+    `sudo chmod 777 #{temp_path}/db.sqlite-wal`
 
     @log.debug "Copied revision database"
     return SQLite3::Database.new TEMP_DB_PATH
@@ -68,8 +70,10 @@ def plant_database(temp_path)
 
     # Move the modded db into place
     @log.debug "Moving new revision database"
-    `sudo mv #{temp_path} /.DocumentRevision-V100/db-V1/db.sqlite`
-    `sudo chmod 644 #{temp_path}`
+    `sudo mv #{temp_path}/db.sqlite /.DocumentRevision-V100/db-V1/db.sqlite`
+    `sudo mv #{temp_path}/db.sqlite-wal /.DocumentRevision-V100/db-V1/db.sqlite-wal`
+    `sudo chmod 644 /.DocumentRevision-V100/db-V1/db.sqlite`
+    `sudo chmod 644 /.DocumentRevision-V100/db-V1/db.sqlite-wal`
 
     # Restart the revisiond process
     @log.debug "Restarting revisiond"
@@ -121,7 +125,7 @@ def traverse(dir, client, db)
 
     @log.debug "Traversing"
     # For each file in dropbox
-    metadata.contents.each do |file| 
+    metadata['contents'].each do |file| 
         if file.is_dir
             traverse file.path, client, db
         else    
