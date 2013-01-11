@@ -5,8 +5,8 @@ require 'sqlite3'
 require 'logger'
 
 # Core Logger init
-log = Logger.new(STDOUT)
-log.level = Logger::DEBUG
+@log = Logger.new(STDOUT)
+@log.level = Logger::DEBUG
 
 APP_KEY = 'd0xovavyvfogdpw'
 APP_SECRET = '26tpquugqgz4rlb'
@@ -21,63 +21,63 @@ tmp_db_path = TEMP_DIR+'db.sqlite'
 # Ready the client
 
 def setup_dropbox()
-    log.debug "Setting up Dropbox"
+    @log.debug "Setting up Dropbox"
 
     ## Dropbox Setup ##
     session = DropboxSession.new(APP_KEY, APP_SECRET)
-    log.debug "Session created"
+    @log.debug "Session created"
 
     # Auth
     session.get_request_token
-    log.debug "Got session request token"
+    @log.debug "Got session request token"
 
     authorize_url = session.get_authorize_url
-    log.debug "Got session auth url"
+    @log.debug "Got session auth url"
 
     # make the user sign in and authorize this token
-    log.info "Allow the app at ", authorize_url
+    @log.info "Allow the app at ", authorize_url
     Launchy.open authorize_url
-    log.info "ENTER to continue..."
+    @log.info "ENTER to continue..."
     # Wait for auth
     gets
 
     session.get_access_token
-    log.debug "Dropbox ready"
+    @log.debug "Dropbox ready"
 
     return DropboxClient.new(session, :dropbox)
 end
 
 ## Version Database initialization ##
 def acquire_database(temp_path)
-    log.debug "Acquiring revision database"
+    @log.debug "Acquiring revision database"
 
     # Clone the existing version database
     `sudo cp /.DocumentRevision-V100/db-V1/db.sqlite #{temp_path}`
     `sudo chmod 777 #{temp_path}`
 
-    log.debug "Copied revision database"
+    @log.debug "Copied revision database"
     return SQLite3::Database.new tmp_db_path
 end
 
 def plant_database(temp_path)
     # Manipulation of Revisiond
     # Launchctl stops revisiond to release fd on db-v1 (version database)
-    log.debug "Stopping revisiond"
+    @log.debug "Stopping revisiond"
     `sudo launchctl stop com.apple.revisiond`
 
     # Move the modded db into place
-    log.debug "Moving new revision database"
+    @log.debug "Moving new revision database"
     `sudo mv #{temp_path} /.DocumentRevision-V100/db-V1/db.sqlite`
     `sudo chmod 644 #{temp_path}`
 
     # Restart the revisiond process
-    log.debug "Restarting revisiond"
+    @log.debug "Restarting revisiond"
     `sudo launchctl start com.apple.revisiond`
 end
 
 # Pull history from dropbox
 def get_revisions(file_path, sequence_number, client, db)
-    log.debug "Getting revisions of", div
+    @log.debug "Getting revisions of"
 
     revisions = client.revisions file_path
     revisions.each do |rev|
@@ -91,7 +91,7 @@ def get_revisions(file_path, sequence_number, client, db)
 
         add_time = (Time.parse(rev.modified).to_f * 1000.0).to_i
 
-        log.debug "Writing file", target_path
+        @log.debug "Writing file"
         # Write this out
         File.open(target_path, 'w+') { |f| f.write contents }
         # Change the creation/mod time on the file
@@ -115,10 +115,10 @@ end
 
 # Walk across Dropbox file tree
 def traverse(dir, client, db)
-    log.debug "Getting metadata for", dir
+    @log.debug "Getting metadata for"
     metadata = client.metadata dir
 
-    log.debug "Traversing", dir
+    @log.debug "Traversing"
     # For each file in dropbox
     metadata.contents.each do |file| 
         if file.is_dir
