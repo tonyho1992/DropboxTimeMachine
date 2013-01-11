@@ -8,8 +8,8 @@ require 'logger'
 log = Logger.new(STDOUT)
 log.level = Logger::DEBUG
 
-APP_KEY = 'INSERT-APP-KEY-HERE'
-APP_SECRET = 'INSERT-APP-SECRET-HERE'
+APP_KEY = 'd0xovavyvfogdpw'
+APP_SECRET = '26tpquugqgz4rlb'
 
 TEMP_DIR = '/tmp/'
 HISTORY_DIR = '~/.dbhistory/'
@@ -78,7 +78,7 @@ end
 # Pull history from dropbox
 def get_revisions(file_path, sequence_number, client, db)
     log.debug "Getting revisions of", div
-    
+
     revisions = client.revisions file_path
     revisions.each do |rev|
         # File blobs (versions) from dropbox to the history store
@@ -91,10 +91,11 @@ def get_revisions(file_path, sequence_number, client, db)
 
         add_time = (Time.parse(rev.modified).to_f * 1000.0).to_i
 
+        log.debug "Writing file", target_path
         # Write this out
         File.open(target_path, 'w+') { |f| f.write contents }
         # Change the creation/mod time on the file
-        FileUtils.touch target_path { mtime: add_time }
+        FileUtils.touch target_path { :mtime => add_time }
 
         # Insertion of records into version database
         # generation_id,  (auto incremented)
