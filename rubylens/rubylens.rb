@@ -95,7 +95,7 @@ def get_revisions(file_path, sequence_number, client, db)
         # Write this out
         File.open(target_path, 'w+') { |f| f.write contents }
         # Change the creation/mod time on the file
-        FileUtils.touch target_path { :mtime => add_time }
+        FileUtils.touch target_path, { :mtime => add_time }
 
         # Insertion of records into version database
         # generation_id,  (auto incremented)
