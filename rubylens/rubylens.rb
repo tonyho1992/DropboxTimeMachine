@@ -16,7 +16,7 @@ HISTORY_DIR = '~/.dbhistory/'
 DROPBOX_DIR = '~/Dropbox/'
 
 ## History collection ##
-temp_db_path = TEMP_DIR+'db.sqlite'
+TEMP_DB_PATH = TEMP_DIR+'db.sqlite'
 
 # Ready the client
 
@@ -56,7 +56,8 @@ def acquire_database(temp_path)
     `sudo chmod 777 #{temp_path}`
 
     @log.debug "Copied revision database"
-    return SQLite3::Database.new temp_db_path
+    return SQLite3::Database.new TEMP_DB_PATH
+
 end
 
 def plant_database(temp_path)
@@ -164,10 +165,10 @@ end
 
 client = setup_dropbox
 
-db = acquire_database temp_db_path
+db = acquire_database TEMP_DB_PATH
 
 # Root dir
 traverse '/', client, db
 
-plant_database temp_db_path
+plant_database TEMP_DB_PATH
 
