@@ -16,7 +16,7 @@ HISTORY_DIR = '~/.dbhistory/'
 DROPBOX_DIR = '~/Dropbox/'
 
 ## History collection ##
-tmp_db_path = TEMP_DIR+'db.sqlite'
+temp_db_path = TEMP_DIR+'db.sqlite'
 
 # Ready the client
 
@@ -35,7 +35,7 @@ def setup_dropbox()
     @log.debug "Got session auth url"
 
     # make the user sign in and authorize this token
-    @log.info "Allow the app at ", authorize_url
+    @log.info "Allow the app at "
     Launchy.open authorize_url
     @log.info "ENTER to continue..."
     # Wait for auth
@@ -56,7 +56,7 @@ def acquire_database(temp_path)
     `sudo chmod 777 #{temp_path}`
 
     @log.debug "Copied revision database"
-    return SQLite3::Database.new tmp_db_path
+    return SQLite3::Database.new temp_db_path
 end
 
 def plant_database(temp_path)
@@ -164,10 +164,10 @@ end
 
 client = setup_dropbox
 
-db = acquire_database tmp_db_path
+db = acquire_database temp_db_path
 
 # Root dir
 traverse '/', client, db
 
-plant_database tmp_db_path
+plant_database temp_db_path
 
