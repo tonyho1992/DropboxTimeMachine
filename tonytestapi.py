@@ -132,7 +132,7 @@ row = sqlite_seq.select().execute().fetchone()
 
 id = int(row['seq'])
 
-id_inc = 3
+id_inc = id + 1
 
 seq_update = sqlite_seq.update()
 
