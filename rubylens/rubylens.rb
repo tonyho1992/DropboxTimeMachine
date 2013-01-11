@@ -14,7 +14,7 @@ APP_SECRET = '26tpquugqgz4rlb'
 
 TEMP_DIR = '/tmp'
 HISTORY_DIR = 'dbhistory/'
-DROPBOX_DIR = '/Users/dev/Dropbox'
+DROPBOX_DIR = '/Users/tony/Dropbox'
 
 ## History collection ##
 # Ready the client
@@ -89,9 +89,9 @@ def get_revisions(file_path, sequence_number, client, db)
         contents = client.get_file file_path, rev['rev']
 
         # Make sure the parent directories all exist
-        file_name = rev['path'].split("/").last
+        file_name = File.basename rev['path']
         suff_path = HISTORY_DIR+rev['rev']+file_name
-        target_path = '/.DocumentRevisions-V100/'+suff_path
+        target_path = '/tmp/'+suff_path
         parent_dir_path = File.dirname(target_path)
         FileUtils.mkdir_p(parent_dir_path)
 
@@ -100,8 +100,13 @@ def get_revisions(file_path, sequence_number, client, db)
         @log.debug "Writing file"
         # Write this out
         File.open(target_path, 'w+') { |f| f.write contents }
-        # Change the creation/mod time on the file
+        final_path = '/.DocumentRevisions-V100/'+suff_path
         FileUtils.touch target_path, { :mtime => add_time }
+        @log.debug target_path
+        @log.debug final_path
+        file_size = File.size target_path
+        `sudo mv "#{target_path}" "#{final_path}"`
+        # Change the creation/mod time on the file
 
         # Insertion of records into version database
         # generation_id,  (auto incremented)
@@ -113,7 +118,6 @@ def get_revisions(file_path, sequence_number, client, db)
         # generation_status, (1 ?)
         # generation_add_time, (creation datetime)
         # generation_size (filesize)
-        file_size = File.size target_path
 
         db.execute "insert into generations values (NULL, ?, ?, ?, ?, 1, 1, ?, ?);", [sequence_number, rev['rev']+file_name, 'com.apple.documentVersions', suff_path, add_time, file_size] 
     end

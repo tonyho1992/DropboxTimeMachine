@@ -14,7 +14,7 @@ APP_SECRET = '26tpquugqgz4rlb'
 
 TEMP_DIR = '/tmp'
 HISTORY_DIR = 'dbhistory/'
-DROPBOX_DIR = '/Users/dev/Dropbox'
+DROPBOX_DIR = '/Users/tony/Dropbox'
 
 ## History collection ##
 # Ready the client
@@ -70,8 +70,8 @@ while true
     entries.each do |e|
         meta = e[1]
         if not meta == nil and not meta['is_dir']
-            @log.debug meta['path']
-            target_path = TEMP_DIR+"/TMPDAT"
+            @log.debug (File.basename meta['path'])
+            target_path = TEMP_DIR+"/"+ (File.basename meta['path'])
             contents = client.get_file meta['path']
             dest_path = DROPBOX_DIR + meta['path']
             File.open(target_path, 'w+') { |f| f.write contents }

@@ -1,11 +1,11 @@
 framework 'Cocoa'
 
 TEMP_DIR = '/tmp'
-target_path = TEMP_DIR+"/TMPDAT"
 
 puts "hi"
 
 ARGV.each do |a|
+	target_path = TEMP_DIR+"/"+(File.basename a)
 	puts target_path
 	puts a
 	url1 = NSURL.URLWithString "file://" + target_path
