@@ -16,7 +16,7 @@ HISTORY_DIR = '~/.dbhistory/'
 DROPBOX_DIR = '~/Dropbox/'
 
 ## History collection ##
-TEMP_DB_PATH = TEMP_DIR
+TEMP_DB_PATH = TEMP_DIR + "/db.sqlite"
 
 # Ready the client
 
