@@ -3,6 +3,7 @@ require 'dropbox_sdk'
 require 'launchy'
 require 'sqlite3'
 require 'logger'
+require 'fileutils'
 
 # Core Logger init
 @log = Logger.new(STDOUT)
@@ -11,9 +12,9 @@ require 'logger'
 APP_KEY = 'd0xovavyvfogdpw'
 APP_SECRET = '26tpquugqgz4rlb'
 
-TEMP_DIR = '/tmp/'
-HISTORY_DIR = '~/.dbhistory/'
-DROPBOX_DIR = '~/Dropbox/'
+TEMP_DIR = '/tmp'
+HISTORY_DIR = 'dbhistory/'
+DROPBOX_DIR = '/Users/dev/Dropbox'
 
 ## History collection ##
 # Ready the client
@@ -80,19 +81,21 @@ end
 
 # Pull history from dropbox
 def get_revisions(file_path, sequence_number, client, db)
-    @log.debug "Getting revisions of"
+    @log.debug "Getting revisions of " + file_path
 
     revisions = client.revisions file_path
     revisions.each do |rev|
         # File blobs (versions) from dropbox to the history store
-        contents = client.get_file file_path, rev.rev
+        contents = client.get_file file_path, rev['rev']
 
         # Make sure the parent directories all exist
-        target_path = HISTORY_DIR+file_path
+        file_name = rev['path'].split("/").last
+        suff_path = HISTORY_DIR+rev['rev']+file_name
+        target_path = '/.DocumentRevisions-V100/'+suff_path
         parent_dir_path = File.dirname(target_path)
         FileUtils.mkdir_p(parent_dir_path)
 
-        add_time = (Time.parse(rev.modified).to_f * 1000.0).to_i
+        add_time = Time.parse(rev['modified']).to_i
 
         @log.debug "Writing file"
         # Write this out
@@ -112,7 +115,7 @@ def get_revisions(file_path, sequence_number, client, db)
         # generation_size (filesize)
         file_size = File.size target_path
 
-        db.execute "insert into generations values (NULL, ?, ?, ?, ?, 1, 1, ?, ?);", [sequence_number, rev.rev, 'com.apple.DocumentVersions', target_path, add_time, file_size] 
+        db.execute "insert into generations values (NULL, ?, ?, ?, ?, 1, 1, ?, ?);", [sequence_number, rev['rev']+file_name, 'com.apple.documentVersions', suff_path, add_time, file_size] 
     end
 end
 
@@ -124,12 +127,13 @@ def traverse(dir, client, db)
     @log.debug "Traversing"
     # For each file in dropbox
     metadata['contents'].each do |file| 
-        if file.is_dir
-            traverse file.path, client, db
-        else    
+        if file['is_dir']
+            traverse file['path'], client, db
+        else
+            @log.debug file['path']
             # Create a file entry for the file
             # Location in dropbox
-            dropbox_file_path = DROPBOX_DIR + file.path
+            dropbox_file_path = DROPBOX_DIR + file['path']
             file_inode = File.stat(dropbox_file_path).ino
             parent_inode = File.stat(File.dirname(dropbox_file_path)).ino
 
@@ -138,8 +142,7 @@ def traverse(dir, client, db)
 
             # Query for the sequence number
             result = db.execute("select * from sqlite_sequence")
-            sequence_number = result.next()['seq']
-            result.close
+            sequence_number = result[0][1]
 
             # Storage table
             # storage_id (counter?) <- sequence number
@@ -149,18 +152,18 @@ def traverse(dir, client, db)
 
             # file_row_id (auto incremented)
             # file_name (file name)
-            file_name = File.basename file.path
+            file_name = File.basename file['path']
             # file_parent_id (inode of parent dir)
             # file_path (file path)
             # file_inode (file inode)
             # file_lastseen (file modification date)
-            last_mod = (Time.parse(file.modified).to_f * 1000.0).to_i
+            last_mod = Time.parse(file['modified']).to_i
             # file_status (1)
             # file_storage_id <- sequence number
 
-            db.execute "insert into files values (?, ?, ?, ?, ?, ?, 1, ?);", [sequence_number, file_name, parent_inode, dropbox_file_path, file_inode, last_mod, sequence_number]
+            db.execute "insert into files values (null, ?, ?, ?, ?, ?, 1, ?);", [file_name, parent_inode, dropbox_file_path, file_inode, last_mod, sequence_number]
             # Else if file -> get path & revs
-            get_revisions file.path, sequence_number, client, db
+            get_revisions file['path'], sequence_number, client, db
         end
     end
 end
@@ -173,4 +176,3 @@ db = acquire_database TEMP_DIR
 traverse '/', client, db
 
 plant_database TEMP_DIR
-
