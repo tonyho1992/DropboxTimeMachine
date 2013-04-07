@@ -71,14 +71,11 @@ while true
         meta = e[1]
         if not meta == nil and not meta['is_dir']
             @log.debug (File.basename meta['path'])
-            target_path = TEMP_DIR+"/"+ (File.basename meta['path'])
             contents = client.get_file meta['path']
             dest_path = DROPBOX_DIR + meta['path']
-            File.open(target_path, 'w+') { |f| f.write contents }
-            `macruby tmp.rb #{dest_path}`
-            # url = NSURL.URLWithString "file://" + DROPBOX_DIR + meta['path']
-            # url1 = NSURL.URLWithString "file://" + target_path
-            # NSFileVersion.addVersionOfItemAtURL url, withContentsOfURL: url1, options: 0, error: nil
+            File.open(dest_path, 'w+') { |f| f.write contents }
+            `tmutil startbackup --block`
+            sleep(90)
         end
     end
 
